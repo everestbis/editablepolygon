@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">EditablePolygon</string>
+    <string name="mapbox_access_token">
+</string>
+    <string name="tracking_enabled">Tracking Enabled</string>
+    <string name="tracking_already_enabled">tracking already enabled</string>
+
+</resources>
