@@ -128,11 +128,31 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
             }
 
         }
+        undo_fab.setOnClickListener {
+            val key = polyHashList.keys.first()
+            val lastKey = polyHashList.get(key)?.first?.keys?.last()
 
-        finish_btn.setOnClickListener(View.OnClickListener {
-            newPolygon = true
 
-        })
+            polyHashList.get(key)?.let {
+                if(it.second){
+                    polyHashList.put(key,it.copy(second = false))
+                } else {
+                   it.first.remove(lastKey)
+                    symbolManager.annotations.forEach { key, value ->
+                        if(key.toString().equals(lastKey)){
+                            symbolManager.delete(value)
+                        }
+                    }
+                }
+            }
+
+            drawPolygon()
+        }
+
+//        finish_btn.setOnClickListener(View.OnClickListener {
+//            newPolygon = true
+//
+//        })
 
 
     }
@@ -163,8 +183,8 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
                 FILL_SOURCE_ID
         )
         fillLayer.setProperties(
-                PropertyFactory.lineWidth(2f),
-                PropertyFactory.lineColor(Color.parseColor("#e55e5e"))
+                PropertyFactory.lineWidth(2.5f),
+                PropertyFactory.lineColor(Color.parseColor("#ffffff"))
         )
 //        loadedMapStyle.addLayer(fillLayer)
         loadedMapStyle.addLayerBelow(fillLayer,symbolManager.layerId)
@@ -252,7 +272,7 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
                 BitmapUtils.getBitmapFromDrawable(
                         ContextCompat.getDrawable(
                                 this,
-                                R.drawable.marker
+                                R.drawable.ic_marker
                         )
                 )!!,
                 false
