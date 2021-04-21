@@ -14,3 +14,4 @@
 .cxx
 /app/build.gradle
 /gradle.properties
+/app/src/main/res/values/developer-config.xml
