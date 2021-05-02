@@ -4,14 +4,13 @@ import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.util.LongSparseArray
-import android.util.SparseArray
-import android.view.View
 import androidx.annotation.NonNull
 import androidx.appcompat.app.AppCompatActivity
 import androidx.collection.forEach
-import androidx.collection.valueIterator
 import androidx.core.content.ContextCompat
 import androidx.core.util.forEach
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.LineString
@@ -39,6 +38,7 @@ fun <T> LongSparseArray<T>.getList(): List<T> {
     }
     return list.toList()
 }
+
 class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
     companion object {
         private val TAG = MainActivity::class.qualifiedName
@@ -54,18 +54,26 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
     private var mapView: MapView? = null
     private var mapboxMap: MapboxMap? = null
     private var fillSource: GeoJsonSource? = null
-    var polyHashList: HashMap<String, Pair<LinkedHashMap<String, LatLng>, Boolean>> = HashMap()
-    private var rootSymbolId: String? = null
-    private var newPolygon: Boolean = false
     lateinit var symbolManager: SymbolManager;
+    lateinit var viewModel: MainViewModel
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Mapbox.getInstance(this,getString(R.string.mapbox_access_token))
+        Mapbox.getInstance(this, getString(R.string.mapbox_access_token))
         setContentView(R.layout.activity_main)
+        viewModel = ViewModelProvider(
+                this,
+                ViewModelProvider.NewInstanceFactory()
+        ).get(MainViewModel::class.java)
         mapView = findViewById(R.id.mapView)
         mapView?.onCreate(savedInstanceState)
+        viewModel.polyhashList.observe(this, Observer {
+            if (it == null || it.values.size == 0) {
+                return@Observer
+            }
+            drawPolygon(it)
+        })
         mapView?.getMapAsync { mapboxMap ->
             this.mapboxMap = mapboxMap
 
@@ -76,34 +84,21 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
                     override fun onAnnotationClick(t: Symbol?): Boolean {
                         highlightSymbol(t)
                         Log.d("click click", t?.id.toString());
-                        if (polyHashList.keys.first().equals(t?.id.toString())) {
-                            val polykey = polyHashList.keys.first()
-                            polyHashList.put(polykey, Pair(polyHashList.get(polykey)!!.first, true))
-                        }
-                        drawPolygon()
+                        viewModel.onAnnotationClick(t)
                         return true
                     }
                 })
 
                 symbolManager.addDragListener(object : OnSymbolDragListener {
                     override fun onAnnotationDragStarted(annotation: Symbol?) {
-                        Log.d("drag","drag started")
                         highlightSymbol(annotation)
                         return
                     }
 
                     override fun onAnnotationDrag(annotation: Symbol?) {
-                        annotation?.latLng
-                        Log.d(TAG, "symbol layer id" + symbolManager.layerId)
-
-                        val polyKey = polyHashList.filter {
-                            it.value.first.filterKeys { it.equals(annotation!!.id.toString()) }.keys.size > 0
-                        }.keys.first().toString()
-                        Log.d(TAG, "drag poly key " + polyKey)
-                        polyHashList.get(polyKey)?.first?.put(annotation!!.id.toString(), annotation!!.latLng)
 
 
-                        drawPolygon()
+                        viewModel.annotationDrag(annotation)
                         return
                     }
 
@@ -120,7 +115,7 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
 
                 val position = CameraPosition.Builder()
                         .target(LatLng(51.50550, -0.07520))
-                        .zoom(8.0)
+                        .zoom(14.0)
                         .build()
 
                 mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(position), 2000);
@@ -129,25 +124,16 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
 
         }
         undo_fab.setOnClickListener {
-            val key = polyHashList.keys.first()
-            val lastKey = polyHashList.get(key)?.first?.keys?.last()
+            val lastKey = viewModel.undoClick()
 
-
-            polyHashList.get(key)?.let {
-                if(it.second){
-                    polyHashList.put(key,it.copy(second = false))
-                } else {
-                   it.first.remove(lastKey)
-                    symbolManager.annotations.forEach { key, value ->
-                        if(key.toString().equals(lastKey)){
-                            symbolManager.delete(value)
-                        }
+            lastKey?.let {
+                symbolManager.annotations.forEach { key, value ->
+                    if (key.toString().equals(lastKey)) {
+                        symbolManager.delete(value)
                     }
                 }
+//            drawPolygon(it)
             }
-
-            drawPolygon()
-        }
 
 //        finish_btn.setOnClickListener(View.OnClickListener {
 //            newPolygon = true
@@ -155,14 +141,16 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
 //        })
 
 
+        }
     }
 
-    fun highlightSymbol(t:Symbol?){
+    fun highlightSymbol(t: Symbol?) {
         var symbols = symbolManager.annotations
-        symbols.forEach{k,v->v.iconImage = ID_ICON_LOCATION}
+        symbols.forEach { k, v -> v.iconImage = ID_ICON_LOCATION }
         val lists = ArrayList<Symbol>(symbols.size())
-        symbols.forEach{k,v->
-            lists.add(v) }
+        symbols.forEach { k, v ->
+            lists.add(v)
+        }
 
         symbolManager.update(lists)
         t?.iconImage = ID_ICON_LOCATION_SELECTED
@@ -187,13 +175,18 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
                 PropertyFactory.lineColor(Color.parseColor("#ffffff"))
         )
 //        loadedMapStyle.addLayer(fillLayer)
-        loadedMapStyle.addLayerBelow(fillLayer,symbolManager.layerId)
+        loadedMapStyle.addLayerBelow(fillLayer, symbolManager.layerId)
 
     }
 
 
     override fun onMapClick(point: LatLng): Boolean {
-        Log.d(TAG, "Map clicked")
+        val key = viewModel.polyhashList.value?.keys?.firstOrNull()
+        val isCompleted = viewModel.polyhashList.value?.get(key)?.second ?: false
+
+        if (isCompleted) {
+            return false
+        }
 
 
         var symbolOptions: SymbolOptions =
@@ -202,41 +195,16 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
 
         val symbol = symbolManager.create(symbolOptions)
 
+        viewModel.addPoint(point, symbol)
 
-        if (polyHashList.values.isEmpty()) {
-            rootSymbolId = symbol.id.toString()
-        } else if (newPolygon) {
-            newPolygon = false
-            rootSymbolId = symbol.id.toString()
-        }
 
         symbolManager.iconAllowOverlap = true
-
-        if (polyHashList.get(rootSymbolId) == null) {
-            polyHashList.put(rootSymbolId!!, Pair(linkedMapOf(symbol.id.toString() to point), false))
-        } else {
-            polyHashList.get(rootSymbolId)?.first?.put(symbol.id.toString(), point)
-        }
-
-        Log.d(TAG, "layer id " + symbol.id.toString())
-        Log.d(TAG, polyHashList.toString())
-
-
-
-
-
-
-
-
-        drawPolygon()
-
-
         return false
 
     }
 
-    private fun drawPolygon() {
-        val points = polyHashList.values
+    private fun drawPolygon(hashMap: HashMap<String, Pair<LinkedHashMap<String, LatLng>, Boolean>>) {
+        val points = hashMap.values
 
         val latLngs: List<Point> = points.map {
             val items = it.first.values.toList().map { it -> Point.fromLngLat(it.longitude, it.latitude) }
