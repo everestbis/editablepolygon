@@ -8,12 +8,19 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
-    <style name="message_text" parent="TextAppearance.MaterialComponents.Headline5">
-        <item name="android:textColor">@color/blue</item>
+    <style name="InformationText" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textColor">@color/text</item>
+    </style>
 
+    <style name="InformationText.Unit">
+        <item name="android:textColor">@color/text</item>
         <item name="android:textStyle">bold</item>
     </style>
 
+    <style name="MainText" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="android:textColor">@color/blue</item>
+        <item name="android:textStyle">bold</item>
+    </style>
     <style name="CustomCardViewStyle" parent="Widget.MaterialComponents.CardView">
         <item name="shapeAppearanceOverlay">@style/custom</item>
     </style>
@@ -26,4 +33,6 @@
         <item name="cornerSizeBottomRight">0dp</item>
         <item name="cornerSizeBottomLeft">0dp</item>
     </style>
+
+    <color name="text">#2E2E2E</color>
 </resources>

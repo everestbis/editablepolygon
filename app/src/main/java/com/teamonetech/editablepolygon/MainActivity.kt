@@ -1,9 +1,13 @@
 package com.teamonetech.editablepolygon
 
+import MeasurementUnit
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.util.LongSparseArray
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.annotation.NonNull
 import androidx.appcompat.app.AppCompatActivity
 import androidx.collection.forEach
@@ -11,6 +15,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.util.forEach
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.LineString
@@ -52,6 +57,12 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
     private lateinit var locationComponent: LocationComponent
 
     private var mapView: MapView? = null
+    private var bottomLt: LinearLayout? = null
+    private var bottomText: TextView? = null
+    private var hectarTv: TextView? = null
+    private var sqMeterTv: TextView? = null
+    private var informationText: TextView? = null
+    private var arrowIv: ImageView? = null
     private var mapboxMap: MapboxMap? = null
     private var fillSource: GeoJsonSource? = null
     lateinit var symbolManager: SymbolManager;
@@ -67,13 +78,26 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
                 ViewModelProvider.NewInstanceFactory()
         ).get(MainViewModel::class.java)
         mapView = findViewById(R.id.mapView)
+        bottomText = findViewById(R.id.bottom_area_text)
+        bottomLt = findViewById(R.id.linearLayout)
+        arrowIv = findViewById(R.id.bottom_arrow)
+        hectarTv = findViewById(R.id.hectar_tv)
+        sqMeterTv = findViewById(R.id.sq_meter_tv)
+        informationText = findViewById(R.id.bottom_information_text)
         mapView?.onCreate(savedInstanceState)
-        viewModel.polyhashList.observe(this, Observer {
-            if (it == null || it.values.size == 0) {
-                return@Observer
+        arrowIv?.setOnClickListener {
+            val bottomBehaviour = BottomSheetBehavior.from(bottomLt!!)
+            when (bottomBehaviour.state) {
+                BottomSheetBehavior.STATE_EXPANDED -> {
+                    closeBottomSheet()
+                }
+                BottomSheetBehavior.STATE_COLLAPSED -> {
+                    openBottomSheet()
+
+                }
             }
-            drawPolygon(it)
-        })
+        }
+        initializeObservers()
         mapView?.getMapAsync { mapboxMap ->
             this.mapboxMap = mapboxMap
 
@@ -82,9 +106,10 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
                 symbolManager = SymbolManager(mapView!!, mapboxMap!!, mapboxMap?.style!!)
                 symbolManager.addClickListener(object : OnSymbolClickListener {
                     override fun onAnnotationClick(t: Symbol?): Boolean {
+                        viewModel.onAnnotationClick(t)
                         highlightSymbol(t)
                         Log.d("click click", t?.id.toString());
-                        viewModel.onAnnotationClick(t)
+
                         return true
                     }
                 })
@@ -141,6 +166,60 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
 //        })
 
 
+        }
+    }
+
+    private fun initializeObservers() {
+        viewModel.polyhashList.observe(this, Observer {
+            if (it == null || it.values.size == 0) {
+                return@Observer
+            }
+            drawPolygon(it)
+            val area = viewModel.calculateArea()
+            if(area==null){
+                bottomText?.text = ""
+            }
+            area?.let {
+                val acre = viewModel.convertArea(MeasurementUnit.acre, area)
+                bottomText?.text = "Area: $acre "
+                val hectar = viewModel.convertArea(MeasurementUnit.hectar,area)
+                hectarTv?.text = hectar
+                val sqMeter = viewModel.convertArea(MeasurementUnit.sqMeter,area)
+                sqMeterTv?.text = sqMeter
+                openBottomSheet()
+
+            }
+
+        })
+
+        viewModel.message.observe(this, Observer {
+            informationText?.text = (it)
+        })
+    }
+
+    private fun openBottomSheet() {
+        val bottomBehaviour = BottomSheetBehavior.from(bottomLt!!)
+        bottomBehaviour.state = BottomSheetBehavior.STATE_EXPANDED
+        arrowIv?.let {
+            it.setImageDrawable(
+                    ContextCompat.getDrawable(
+                            it.context,
+                            R.drawable.ic_arrow_down
+                    )
+            )
+        }
+    }
+
+    private fun closeBottomSheet() {
+        val bottomBehaviour = BottomSheetBehavior.from(bottomLt!!)
+        bottomBehaviour.state = BottomSheetBehavior.STATE_COLLAPSED
+        arrowIv?.let {
+            it.setImageDrawable(
+                    ContextCompat.getDrawable(
+                            it.context,
+                            R.drawable.ic_arrow_up
+                    )
+            )
         }
     }
 
@@ -207,8 +286,9 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
         val points = hashMap.values
 
         val latLngs: List<Point> = points.map {
-            val items = it.first.values.toList().map { it -> Point.fromLngLat(it.longitude, it.latitude) }
-                    .toMutableList()
+            val items =
+                    it.first.values.toList().map { it -> Point.fromLngLat(it.longitude, it.latitude) }
+                            .toMutableList()
             if (it.second) {
                 items.add(items.get(0))
             }
@@ -246,7 +326,8 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
                 false
         )
 
-        style.addImage(ID_ICON_LOCATION_SELECTED, BitmapUtils.getBitmapFromDrawable(
+        style.addImage(
+                ID_ICON_LOCATION_SELECTED, BitmapUtils.getBitmapFromDrawable(
                 ContextCompat.getDrawable(
                         this,
                         R.drawable.marker_selected
