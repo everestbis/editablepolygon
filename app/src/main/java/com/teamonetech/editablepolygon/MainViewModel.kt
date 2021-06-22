@@ -1,14 +1,17 @@
 package com.teamonetech.editablepolygon
 
 import MeasurementUnit
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.mapbox.geojson.Feature
+import com.mapbox.geojson.LineString
 import com.mapbox.geojson.Point
 import com.mapbox.geojson.Polygon
 import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.mapboxsdk.plugins.annotation.Symbol
+import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfMeasurement
 
 class MainViewModel : ViewModel() {
@@ -104,6 +107,11 @@ class MainViewModel : ViewModel() {
         _polyHashList.value = polyHashList
     }
 
+    fun calculateLength(): Double {
+
+        return 0.0
+    }
+
     //Area in Acre
     fun calculateArea(): Double? {
         val data = _polyHashList.value
@@ -120,6 +128,9 @@ class MainViewModel : ViewModel() {
                     pointList.add(it)
                 }
                 val feature = Feature.fromGeometry(Polygon.fromLngLats(listOf(pointList)))
+                val length = TurfMeasurement.length(LineString.fromLngLats(pointList!!.toList()), TurfConstants.UNIT_METERS)
+                Log.d("length", "length is $length")
+
                 val area = (TurfMeasurement.area(feature))
                 return area
 

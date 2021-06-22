@@ -16,6 +16,7 @@ import androidx.core.util.forEach
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.tabs.TabLayout
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.FeatureCollection
 import com.mapbox.geojson.LineString
@@ -63,6 +64,7 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
     private var sqMeterTv: TextView? = null
     private var informationText: TextView? = null
     private var arrowIv: ImageView? = null
+    private var tabLayout: TabLayout? = null
     private var mapboxMap: MapboxMap? = null
     private var fillSource: GeoJsonSource? = null
     lateinit var symbolManager: SymbolManager;
@@ -82,9 +84,30 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
         bottomLt = findViewById(R.id.linearLayout)
         arrowIv = findViewById(R.id.bottom_arrow)
         hectarTv = findViewById(R.id.hectar_tv)
+        tabLayout = findViewById(R.id.tab_layout)
         sqMeterTv = findViewById(R.id.sq_meter_tv)
         informationText = findViewById(R.id.bottom_information_text)
         mapView?.onCreate(savedInstanceState)
+
+        tabLayout?.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                when (tab?.position) {
+                    0 -> {
+                        Log.d("area", "area")
+                    }
+                    1 -> {
+                        Log.d("length", "length")
+
+                    }
+                }
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) {
+            }
+
+            override fun onTabReselected(tab: TabLayout.Tab?) {
+            }
+        })
         arrowIv?.setOnClickListener {
             val bottomBehaviour = BottomSheetBehavior.from(bottomLt!!)
             when (bottomBehaviour.state) {
@@ -176,15 +199,15 @@ class MainActivity : AppCompatActivity(), MapboxMap.OnMapClickListener {
             }
             drawPolygon(it)
             val area = viewModel.calculateArea()
-            if(area==null){
+            if (area == null) {
                 bottomText?.text = ""
             }
             area?.let {
                 val acre = viewModel.convertArea(MeasurementUnit.acre, area)
                 bottomText?.text = "Area: $acre "
-                val hectar = viewModel.convertArea(MeasurementUnit.hectar,area)
+                val hectar = viewModel.convertArea(MeasurementUnit.hectar, area)
                 hectarTv?.text = hectar
-                val sqMeter = viewModel.convertArea(MeasurementUnit.sqMeter,area)
+                val sqMeter = viewModel.convertArea(MeasurementUnit.sqMeter, area)
                 sqMeterTv?.text = sqMeter
                 openBottomSheet()
 

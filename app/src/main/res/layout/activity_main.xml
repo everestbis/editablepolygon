@@ -3,9 +3,46 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:elevation="100dp"
+        android:layout_gravity="center_horizontal"
+        android:padding="32dp">
+
+        <View
+            android:id="@+id/indicator"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:background="@drawable/gradient_bg" />
+
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tab_layout"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@drawable/tab_bg"
+
+            app:tabIndicator="@null">
+
+            <com.google.android.material.tabs.TabItem
+                android:id="@+id/area_tab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Area" />
+
+            <com.google.android.material.tabs.TabItem
+                android:id="@+id/length_tab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Length" />
+        </com.google.android.material.tabs.TabLayout>
+    </FrameLayout>
+
     <FrameLayout xmlns:mapbox="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+
         android:orientation="vertical">
 
         <com.mapbox.mapboxsdk.maps.MapView
@@ -56,23 +93,22 @@
                 android:orientation="vertical">
 
 
-
                 <TextView
                     android:id="@+id/bottom_information_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:layout_marginEnd="8dp"
                     android:layout_marginTop="24dp"
+                    android:layout_marginEnd="8dp"
                     android:padding="4dp"
                     android:textAppearance="@style/InformationText" />
 
                 <ImageView
                     android:id="@+id/bottom_arrow"
-                    android:padding="8dp"
-                    android:layout_alignParentEnd="true"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:padding="8dp"
                     android:src="@drawable/ic_arrow_up" />
 
                 <LinearLayout
@@ -82,24 +118,22 @@
                     android:layout_alignParentTop="true"
                     android:layout_marginTop="26dp"
                     android:orientation="horizontal">
+
                     <TextView
                         android:id="@+id/bottom_area_text"
                         android:layout_width="match_parent"
-                        android:paddingLeft="4dp"
                         android:layout_height="wrap_content"
+                        android:paddingLeft="4dp"
                         android:textAppearance="@style/MainText">
 
                     </TextView>
                 </LinearLayout>
 
                 <include
+                    layout="@layout/units"
                     android:layout_width="match_parent"
-                    android:layout_height="300dp"
-                    android:layout_below="@id/bottom_area_lt"
-                    layout="@layout/units">
-
-
-
+                    android:layout_height="150dp"
+                    android:layout_below="@id/bottom_area_lt">
 
 
                 </include>
